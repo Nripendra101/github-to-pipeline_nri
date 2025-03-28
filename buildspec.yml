@@ -1,0 +1,16 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+  build:
+    commands:
+      - echo "Zipping Lambda function..."
+      - zip -r function.zip .
+  post_build:
+    commands:
+      - echo "Deploying to AWS Lambda..."
+      - aws lambda update-function-code --function-name MyLambdaFunction --zip-file fileb://function.zip
+artifacts:
+  files:
+    - function.zip
