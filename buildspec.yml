@@ -1,16 +1,30 @@
 version: 0.2
+
 phases:
   install:
     runtime-versions:
-      python: 3.11
+      python: latest
+    commands:
+      - apt-get update && apt-get install -y jq  # Install jq for JSON parsing
+
+  pre_build:
+    commands:
+      - echo "Retrieving GitHub PAT from AWS Secrets Manager..."
+      - export GITHUB_PAT=$(aws secretsmanager get-secret-value --secret-id github/access_aws --query SecretString --output text | jq -r .pat)
+      - echo "Configuring Git to use the PAT..."
+      - git config --global credential.helper cache
+      - echo "https://x-access-token:$GITHUB_PAT@github.com" > ~/.git-credentials
+
   build:
     commands:
-      - echo "Zipping Lambda function..."
+      - echo "Cloning the GitHub repository..."
+      - git clone https://x-access-token:$GITHUB_PAT@github.com/Nripendra101/github-to-pipeline_nri.git
+      - cd github-to-pipeline_nri
+      - echo "Zipping the package for Lambda deployment..."
       - zip -r function.zip .
+
   post_build:
     commands:
-      - echo "Deploying to AWS Lambda..."
-      - aws lambda update-function-code --function-name MyLambdaFunction --zip-file fileb://function.zip
-artifacts:
-  files:
-    - function.zip
+      - echo "Deploying Lambda function (nrip-test)..."
+      - aws lambda update-function-code --function-name nrip-test --zip-file fileb://function.zip
+      - echo "Deployment complete!"
